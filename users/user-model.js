@@ -1,10 +1,11 @@
-const db = require('../data/users.db3')
+const db = require('../data/dbconfig.js')
 module.exports = {
     find,
     findById,
     add,
     update,
-    remove
+    remove,
+    findBy
 }
 
 function find(){
@@ -33,3 +34,9 @@ function remove(id) {
     .where({id})
     .del()
 }
+
+function findBy(filter) {
+    return db('users')
+      .select('id', 'username', 'password')
+      .where(filter);
+  }

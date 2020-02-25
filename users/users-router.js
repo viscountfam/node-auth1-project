@@ -1,9 +1,10 @@
 const express = require("express");
 const bcrypt = require('bcryptjs')
 const users = require("./user-model.js");
+const restricted = require('../restricted-middleware.js')
 const router = express.Router();
 
-router.get("/users", (req, res) => {
+router.get("/users", restricted, (req, res) => {
   users
     .find()
     .then(users => {
@@ -14,7 +15,7 @@ router.get("/users", (req, res) => {
     });
 });
 
-router.get("/users/:id", (req, res) => {
+router.get("/users/:id", restricted, (req, res) => {
   const { id } = req.params;
 
   users
@@ -39,6 +40,7 @@ router.post("/register", (req, res) => {
   users
     .add(userData)
     .then(user => {
+      req.session.loggedIn = true;
       res.status(201).json(user);
     })
     .catch(err => {
@@ -51,10 +53,13 @@ router.post("/login", (req, res) => {
   let { username, password } = req.body;
 
   users
-    .findById({ username })
+    .findBy({username})
     .first()
     .then(user => {
-      if (user && bcrypt.compareSync(password, user.password)) {
+        console.log("this is user", user)
+      if (user && bcrypt.compareSync(password, user.Password)) {
+        req.session.loggedIn = true
+        req.session.username = user.username
         res.status(200).json({ message: `Welcome ${user.username}!` });
       } else {
         res.status(401).json({ message: "Invalid Credentials" });
@@ -65,7 +70,21 @@ router.post("/login", (req, res) => {
     });
 });
 
-router.put("/:id", (req, res) => {
+router.get('/logout', (req, res) => {
+    if(req.session) {
+    req.session.destroy(err => {
+      if(err) {
+        res.status(500).json({message: "You could not be logged out"})
+      } else {
+        res.status(200).json({ you: 'The log out was successful'})
+      }
+    });
+    } else {
+      res.status(200).json({message: "Failure to log out"})
+    }
+  })
+
+router.put("/:id", restricted, (req, res) => {
   const { id } = req.params.id;
   const changes = req.body;
 
@@ -86,7 +105,7 @@ router.put("/:id", (req, res) => {
     });
 });
 
-router.delete("/:id", (req, res) => {
+router.delete("/:id", restricted, (req, res) => {
   const { id } = req.params;
 
   users
